@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI-personalised seller messaging · Vikranth Babu T</title>
+<meta name="description" content="Case study: LLM-written banner copy for 1,650 customer groups at eBay, shipped behind an evaluation gate and Responsible AI sign-off.">
+<meta property="og:title" content="AI-personalised seller messaging">
+<meta property="og:description" content="How we scoped, evaluated and tested LLM-written copy at eBay, and what the A/B test showed.">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101828'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='700' font-size='15' text-anchor='middle' fill='%23f5f7fa'%3EVT%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Schibsted+Grotesk:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="site-name" href="../index.html">Vikranth Babu T</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="../index.html#work" aria-current="page">Work</a>
+      <a href="../index.html#background">Background</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===== Case header (template: keep this shape for every case study) ===== -->
+  <header class="case-head">
+    <div class="wrap">
+      <p class="case-kicker"><a href="../index.html#work">Selected work</a> / eBay, 2025</p>
+      <h1 class="case-title">AI-personalised seller messaging</h1>
+
+      <dl class="case-facts">
+        <div><dt>Asked by</dt><dd>The Selling Product team</dd></div>
+        <div><dt>My role</dt><dd>Science PRD, system design and evaluation, hands-on build</dd></div>
+        <div><dt>Markets</dt><dd>US, UK and Germany</dd></div>
+        <div><dt>Timeline</dt><dd>About 3 months, PRD to live test</dd></div>
+      </dl>
+
+      <p class="case-summary">eBay wanted more of its buyers to try selling. The Selling Product team proposed a bigger, personalised "Sell one like this" banner on the listing page, with the copy written by an LLM. With the product manager I wrote the science PRD and scoped the work into a phase we could vet and ship. I designed the system and its evaluation, and built the generation loop myself. About three months later, 1,650 pre-vetted messages went into a three-arm A/B test, with Responsible AI sign-off.</p>
+      <p class="work-result"><strong>Result.</strong> AI copy beat human-written copy on click-through in Germany (statistically significant) and matched it in the US and UK. Neither new panel beat the existing button, and the bigger panel cost buying conversion, so copy iteration stopped.</p>
+
+      <nav aria-label="Case study sections">
+        <ol class="beats">
+          <li><a href="#ask">The ask</a></li>
+          <li><a href="#scope">Scope and design</a></li>
+          <li><a href="#system">System, evaluation and guardrails</a></li>
+          <li><a href="#outcome">Outcome and learnings</a></li>
+        </ol>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== Beat 1: the ask ===== -->
+  <section class="section case-section" id="ask" aria-labelledby="ask-title">
+    <div class="wrap">
+      <h2 class="section-title" id="ask-title"><span class="beat-number">1 of 4</span>The ask</h2>
+      <div class="section-body flow">
+        <p>Growing casual (C2C) selling was a strategic priority. Buyers who also sell tend to be more valuable customers, though that is a correlation, not proof of cause. Research pointed to perception as the barrier: selling feels hard, slow and costly, so many people never start a listing, and many who start never finish.</p>
+        <p>The idea came from the Selling Product team. They planned to turn the small "Sell one like this" button at the bottom of a listing into a bigger panel, with copy personalised to the buyer. The button opens the listing flow with the item's details pre-filled. Analytics had already built customer segments and a propensity-to-sell model. The team asked my group to use LLMs to write the copy.</p>
+
+        <div class="mock-pair" role="group" aria-label="The listing page module, before and after">
+          <figure class="mock">
+            <figcaption>Control: the existing button</figcaption>
+            <div class="mock-page" aria-hidden="true">
+              <div class="mock-block is-image"></div>
+              <div class="mock-block"></div>
+              <div class="mock-block is-short"></div>
+              <div class="mock-button">Sell one like this</div>
+            </div>
+          </figure>
+          <figure class="mock">
+            <figcaption>Treatment: a bigger panel with copy for the buyer's group</figcaption>
+            <div class="mock-page" aria-hidden="true">
+              <div class="mock-block is-image" style="height:3rem"></div>
+              <div class="mock-block is-short"></div>
+              <div class="mock-panel">
+                <p><strong>Headline written for this customer group</strong></p>
+                <p>One or two lines of supporting copy, within the character limit.</p>
+                <div class="mock-button">Sell one like this</div>
+              </div>
+            </div>
+          </figure>
+        </div>
+
+        <h3>Two questions before the build</h3>
+        <p><strong>Why AI?</strong> A content team could hand-write three to ten versions in the time available, and each new banner use case took weeks. Writing for 1,650 customer groups needed something else.</p>
+        <p><strong>Is copy the lever?</strong> Probably not the biggest one. Most of the friction sits after the click, in the listing flow. So we named the business north star explicitly, kept the science metric to what copy can move, and put a guardrail on the listing page's main job, which is selling the item on it.</p>
+
+        <dl class="measures">
+          <div><dt>Business north star</dt><dd>New or reactivated listing attempters and listers (NORA and NORL)</dd></div>
+          <div><dt>Guardrail</dt><dd>Buying conversion on the listing page</dd></div>
+          <div><dt>Science measure</dt><dd>Click-through rate on the banner</dd></div>
+          <div><dt>Scale</dt><dd>1,650 customer groups in each of 3 markets</dd></div>
+        </dl>
+
+        <h3>What the generated copy looked like</h3>
+        <div class="examples">
+          <figure class="example">
+            <blockquote><p class="headline">Turn garage clutter into cash</p><p class="body">Ready to sell again? It's free. We'll use this item's details to get you started fast.</p></blockquote>
+            <figcaption>Written for lapsed sellers</figcaption>
+          </figure>
+          <figure class="example">
+            <blockquote><p class="headline">Turn home into extra cash</p><p class="body">List with details copied over. Selling is simple, even if you're just getting started.</p></blockquote>
+            <figcaption>Written for first-time sellers</figcaption>
+          </figure>
+          <figure class="example">
+            <blockquote><p class="headline">We know you love eBay.</p><p class="body">Time to try selling?</p></blockquote>
+            <figcaption>Written for heavy buyers</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Beat 2: scope and design ===== -->
+  <section class="section case-section" id="scope" aria-labelledby="scope-title">
+    <div class="wrap">
+      <h2 class="section-title" id="scope-title"><span class="beat-number">2 of 4</span>Scope and design</h2>
+      <div class="section-body flow">
+        <p>The science PRD asked one question: what is the best copy for this buyer, at this moment, within brand, legal, safety and UX rules? Two things were out of scope by design: whether to show the banner at all, and anything after the click.</p>
+
+        <h3>The disagreement</h3>
+        <p>The Selling team wanted copy personalised to each individual. The product manager and I argued for phasing it, and the case came down to one question.</p>
+        <blockquote class="pull"><p>When the AI makes an error and shows a non-compliant message, are we prepared for the effect?</p></blockquote>
+        <p>You can't pre-vet hundreds of millions of one-to-one variants. Rule checks and an LLM judge reduce errors but don't eliminate them. And there was no track record yet for trusting AI-written copy in front of customers. Phasing it won the argument, and the same design is why Responsible AI signed off.</p>
+
+        <div class="phases">
+          <div class="phase is-built">
+            <h4>Phase 1: personalise by customer group</h4>
+            <p class="phase-state">Built and tested</p>
+            <ul>
+              <li>Copy for pre-defined customer groups</li>
+              <li>Every message generated, evaluated and vetted before launch</li>
+              <li>Listing page first, home page next</li>
+            </ul>
+          </div>
+          <div class="phase is-deferred">
+            <h4>Phase 2: one-to-one copy</h4>
+            <p class="phase-state">Deferred</p>
+            <ul>
+              <li>Copy generated live for each person</li>
+              <li>Larger pipelines and a stricter Responsible AI and Legal review</li>
+              <li>Earn trust in AI-written copy in Phase 1 first</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Customer groups</h3>
+        <p>We could only use segments the serving platform could look up at low latency, so we kept those and dropped the rest. Combined, they make 1,650 customer groups in each market, with one message per group.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Dimension</th><th scope="col">Values</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Item category</th><td>Electronics, Fashion, Home &amp; Garden and others</td></tr>
+              <tr><th scope="row">Market</th><td>US, UK, Germany</td></tr>
+              <tr><th scope="row">Listing history</th><td>Active, churned, new</td></tr>
+              <tr><th scope="row">Selling status</th><td>No sales, active seller, churned seller</td></tr>
+              <tr><th scope="row">Active-seller type</th><td>Hobbyist, occasional, small pro, trader</td></tr>
+              <tr><th scope="row">Buyer loyalty</th><td>Low, medium, high</td></tr>
+              <tr><th scope="row">Propensity to sell</th><td>Low, medium, high</td></tr>
+              <tr><th scope="row">Platform expertise</th><td>Novice, advanced, expert</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>There was no evidence on which personalisation hook works for which group, so we let the LLM choose the hook and set the tone by market and expertise: direct in Germany, bold and value-driven in the US, sustainability-led with a little humour in the UK, and simpler for novices.</p>
+
+        <h3>Plan and teams</h3>
+        <p>About three months from PRD to live test, and an A/B test of about three weeks. Five core teams: Selling Product, Science, Analytics, Design (UX and Content) and Engineering, with Legal on the policy rules and Responsible AI on sign-off.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Beat 3: system, evaluation and guardrails ===== -->
+  <section class="section case-section" id="system" aria-labelledby="system-title">
+    <div class="wrap">
+      <h2 class="section-title" id="system-title"><span class="beat-number">3 of 4</span>System, evaluation and guardrails</h2>
+      <div class="section-body is-wide">
+        <div class="legend" aria-hidden="true">
+          <span><i class="key-science"></i>Science (my team)</span>
+          <span><i class="key-partner"></i>Partner teams</span>
+        </div>
+
+        <div class="lane">
+          <p class="lane-name">Offline: generate and vet</p>
+          <ol class="flow-steps">
+            <li class="step is-partner"><span class="owner">Analytics</span><strong>Customer groups</strong>Segments, market and item category</li>
+            <li class="step is-science"><span class="owner">Science</span><strong>Generate</strong>Prompted LLMs; GPT-4, Gemini 2.5 and eBay's Llama-based model compared</li>
+            <li class="step is-science"><span class="owner">Science</span><strong>Evaluate</strong>Rule checks plus an LLM judge (GPT-4), looped with Generate</li>
+            <li class="step is-science"><span class="owner">Science-led, five teams</span><strong>Human review</strong>Flag violations; refine the judge; pick the best variant</li>
+            <li class="step is-science"><span class="owner">Science</span><strong>Vetted set</strong>One message per group, tagged by hook</li>
+          </ol>
+        </div>
+
+        <div class="lane">
+          <p class="lane-name">Online: serve and test</p>
+          <ol class="flow-steps">
+            <li class="step is-partner"><span class="owner">Data Engineering</span><strong>Data pipeline</strong>Offline batch output into a new, locked-down serving platform</li>
+            <li class="step is-partner"><span class="owner">Engineering</span><strong>Serving</strong>Look up the buyer's customer group and return its copy</li>
+            <li class="step is-science"><span class="owner">Science</span><strong>A/B test</strong>Control vs human copy vs AI copy, in the US, UK and Germany</li>
+          </ol>
+        </div>
+
+        <p class="loop-line">Humans trained the evaluator; the evaluator trained the generator.</p>
+
+        <div class="flow" style="max-width:var(--measure)">
+          <p>I drafted the evaluation rubric from Content Design's guidelines and refined it with them. Rule checks took the deterministic parts, and a GPT-4 judge took the nuanced ones. Once the judge was settled, I used it to tune the generation prompt and pick the model with the best pass rate. The judge checked compliance only. Whether a message was good was left to the experiment.</p>
+          <p>The hard part of the online lane was getting offline batch output into a new, locked-down serving platform. I agreed with Data Engineering that they would build the pipeline and handle permissions, latency and service levels, with my team owning it for the test. That split got the test live sooner than building it ourselves.</p>
+        </div>
+
+        <div class="panels">
+          <div class="panel">
+            <h3>Evaluation</h3>
+            <ul>
+              <li><strong>Rule checks</strong> for the deterministic: character limits, punctuation, CTA format, message structure</li>
+              <li><strong>LLM judge</strong> for the nuanced: legal and value-proposition rules, brand voice and tone, staying on point</li>
+              <li><strong>Rubric</strong> drafted from Content's guidelines and refined with Content</li>
+              <li><strong>Prompt tuning</strong> against the judge, then the model with the best pass rate</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Human in the loop</h3>
+            <ul>
+              <li><strong>Science-led review</strong>, with volunteers from Product, Engineering, Content and Analytics</li>
+              <li><strong>Label Studio</strong>: three variants per group, with a written reviewer guide</li>
+              <li><strong>Two tasks</strong>: flag issues, and pick the best variant to choose the model and prompt</li>
+              <li><strong>Caught</strong>: German tone, punctuation slips and LLM hallucinations</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Guardrails</h3>
+            <ul>
+              <li><strong>No live generation</strong>: every message vetted before any customer saw it</li>
+              <li><strong>Responsible AI sign-off</strong>, won by that pre-vetting design</li>
+              <li><strong>Pass means compliant</strong>; "good" left for the experiment to decide</li>
+              <li><strong>Traceable</strong>: every message tagged by hook, so results trace back to the copy</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Beat 4: outcome and learnings ===== -->
+  <section class="section case-section" id="outcome" aria-labelledby="outcome-title">
+    <div class="wrap">
+      <h2 class="section-title" id="outcome-title"><span class="beat-number">4 of 4</span>Outcome and learnings</h2>
+      <div class="section-body is-wide">
+        <p style="max-width:var(--measure)">The copy held up; the bigger panel didn't. The test ran for about three weeks on the listing page in the US, UK and Germany.</p>
+
+        <div class="table-scroll">
+          <table class="results">
+            <caption class="sr-only" style="position:absolute;left:-9999px">A/B test results by arm</caption>
+            <thead>
+              <tr><th scope="col">Arm</th><th scope="col">Click-through, US and UK</th><th scope="col">Click-through, Germany</th><th scope="col">New and reactivated sellers</th><th scope="col">Buying conversion</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Control (existing button)</th><td>Baseline</td><td>Baseline</td><td>Baseline</td><td>Baseline</td></tr>
+              <tr><th scope="row">Human copy, new panel</th><td>Neutral</td><td>Neutral</td><td>Neutral</td><td class="cell-down">Down</td></tr>
+              <tr class="is-ai"><th scope="row">AI copy, new panel</th><td>Neutral, on par with human copy</td><td class="cell-up">Above human copy*</td><td>Neutral</td><td class="cell-down">Down</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">* Statistically significant against human copy; neutral against control. Neither new panel beat the existing button on clicks.</p>
+
+        <div class="flow" style="max-width:var(--measure); margin-top:1.75rem">
+          <p>Read the rows as two comparisons. Human copy against control isolates the panel: no gain in clicks, and buying conversion dropped. AI copy against human copy isolates the copy: on par in the US and UK, and better in Germany, where the tone guidance was direct. New and reactivated sellers didn't move, which points past the banner to the journey after the click.</p>
+          <p>Copy iteration stopped because of the placement result.</p>
+        </div>
+
+        <div class="panels">
+          <div class="panel is-went-well">
+            <h3>What went well</h3>
+            <ul>
+              <li>About three months from PRD to live test, on the committed timeline</li>
+              <li>Five teams aligned, with Legal on policy rules</li>
+              <li>Responsible AI sign-off for customer-facing generated copy</li>
+              <li>Product and Content happy with offline quality</li>
+              <li>In Germany, AI copy beat human copy</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Learnings</h3>
+            <ul>
+              <li><strong>AI is great at generating options; decisions should stay human-led.</strong></li>
+              <li>Human review catches bad copy well; "good" is subjective and better learned from data</li>
+              <li>Tone per market matters: the direct tone won in Germany</li>
+              <li>Banner placement and size can outweigh the copy itself</li>
+              <li>Left to the LLM, the personalisation hook varied from run to run</li>
+            </ul>
+          </div>
+          <div class="panel is-again">
+            <h3>If I did it again</h3>
+            <p class="sub">As science lead</p>
+            <ul>
+              <li>Agree a personalisation framework, with many more good examples</li>
+              <li>Rotate variants and read results per hook</li>
+              <li>Design the test to learn the best hook per group, for example a group-level bandit</li>
+            </ul>
+            <p class="sub">As product lead</p>
+            <ul>
+              <li>Agree decision rules up front, so a placement problem can't end winning copy</li>
+              <li>Test the banner's placement and size on their own, before testing copy</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="case-next" aria-label="More work">
+    <div class="wrap">
+      <p><a href="../index.html#work">Back to selected work</a></p>
+      <p style="color:var(--muted)">Next up: Seller Funded Ads and Google Hotel Ads bidding, both in progress.</p>
+    </div>
+  </nav>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Vikranth Babu T, London</p>
+    <p>Built by hand in HTML and CSS. No tracking.</p>
+  </div>
+</footer>
+</body>
+</html>
